@@ -114,9 +114,9 @@
       <span class="sev">method · fuzzing · PoC</span>
       <span>2026-08-27</span>
     </div>
-    <h3>A patch is a hypothesis</h3>
-    <p>Checking someone else's fix, end to end: finding the aliased arrays by reading a header, proving the precondition before fuzzing anything, building an oracle after AddressSanitizer stayed silent on a real out of bounds read, and shrinking a crasher to eight bytes. Every command and every output.</p>
-    <div class="cred">→ structure-aware generator, 6 candidates in 226 execs, 41 bytes down to 8</div>
+    <h3>Checking gzip's .lzh patch</h3>
+    <p>Working notes from going through CVE-2026-41992's fix commit: where the aliasing is written down, why AddressSanitizer reported nothing on a real out of bounds read, the structure-aware generator, and shrinking a candidate to eight bytes. With the commands.</p>
+    <div class="cred">→ 6 candidates in 226 execs, 41 bytes down to 8</div>
   </a>
 
   <a class="post" href="posts/gzip-cve-2026-41992/">

