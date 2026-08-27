@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>zer0d4y5 — security research</title>
+<title>zer0d4y5 · security research</title>
 <meta name="description" content="Vulnerability research writeups by Elias Hasas (@zer0d4y5).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,6 +69,7 @@
     padding:2px 7px; border-radius:3px; background:var(--red); color:#1a0d0b;
     font-weight:600; letter-spacing:0.04em;
   }
+  .post .meta .tag.alt{ background:var(--cyan); color:#06181a; }
   .post .meta .sev{ color:var(--amber); }
   .post h3{
     font-family:'IBM Plex Mono', monospace; font-size:19px; font-weight:600;
@@ -106,6 +107,18 @@
 
   <h2>Writeups</h2>
 
+  <a class="post" href="posts/gzip-lzh-walkthrough/">
+    <div class="meta">
+      <span class="tag alt">Walkthrough</span>
+      <span>GNU gzip</span>
+      <span class="sev">method · fuzzing · PoC</span>
+      <span>2026-08-27</span>
+    </div>
+    <h3>A patch is a hypothesis</h3>
+    <p>Checking someone else's fix, end to end: finding the aliased arrays by reading a header, proving the precondition before fuzzing anything, building an oracle after AddressSanitizer stayed silent on a real out of bounds read, and shrinking a crasher to eight bytes. Every command and every output.</p>
+    <div class="cred">→ structure-aware generator, 6 candidates in 226 execs, 41 bytes down to 8</div>
+  </a>
+
   <a class="post" href="posts/gzip-cve-2026-41992/">
     <div class="meta">
       <span class="tag">CVE-2026-41992</span>
@@ -114,7 +127,7 @@
       <span>2026-08-27</span>
     </div>
     <h3>One array, two lives</h3>
-    <p>The first fix cleared gzip's poisoned Huffman arrays in the branch that crashed, not in the function that reads them — leaving a tree walk eleven lines below it reading 32 KB past the allocation. Measured across three upstream revisions with a layout-independent oracle.</p>
+    <p>The first fix cleared gzip's poisoned Huffman arrays in the branch that crashed, not in the function that reads them, leaving a tree walk eleven lines below it reading 32 KB past the allocation. Measured across three upstream revisions with a layout-independent oracle.</p>
     <div class="cred">→ fix landed upstream in e7378c2d · credited in gzip THANKS and the CVE record</div>
   </a>
 
