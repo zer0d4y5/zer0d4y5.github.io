@@ -109,6 +109,18 @@
 
   <h2>Writeups</h2>
 
+  <a class="post" href="posts/middie-cve-2026-85184/">
+    <div class="meta">
+      <span class="tag">CVE-2026-85184</span>
+      <span>@fastify/middie</span>
+      <span class="sev">CWE-436 · 9.1 Critical</span>
+      <span>2026-09-04</span>
+    </div>
+    <h3>Two parsers, one request line</h3>
+    <p>Fastify's router resolves an absolute-form request target before it dispatches. middie, deciding whether your path-scoped middleware runs, matched the raw string. Same bytes, two answers, and the authentication middleware on the route never ran.</p>
+    <div class="cred">→ fixed in @fastify/middie 9.3.4 · fifth path-matching advisory on the package in eight months</div>
+  </a>
+
   <a class="post" href="posts/gzip-lzh-walkthrough/">
     <div class="meta">
       <span class="tag alt">Walkthrough</span>
