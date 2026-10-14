@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>zer0d4y5 · security research</title>
-<meta name="description" content="Vulnerability research writeups by Elias Hasas (@zer0d4y5).">
+<meta name="description" content="Vulnerability research by Elias Hasas (@zer0d4y5). Write-ups are published on the Brickell Technologies blog.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -100,48 +100,48 @@
 
   <div class="eyebrow"><span class="dot"></span>security research</div>
   <h1>zer0d4y5</h1>
-  <p class="dek">Vulnerability research by Elias Hasas. Mostly parsers, decompressors, and the assumptions that survive a patch. I do this professionally at <a href="https://brickell-tech.com" rel="noopener">Brickell Technologies</a>.</p>
+  <p class="dek">Vulnerability research by Elias Hasas. The write-ups are published on the <a href="https://brickell-tech.com/blog" rel="noopener">Brickell Technologies blog</a>, and this page links to them.</p>
   <div class="links">
     <span><a href="https://github.com/zer0d4y5" target="_blank" rel="noopener">github ↗</a></span>
     <span><a href="https://github.com/zer0d4y5/argus" target="_blank" rel="noopener">argus ↗</a></span>
-    <span><a href="https://brickell-tech.com" target="_blank" rel="noopener">brickell technologies ↗</a></span>
+    <span><a href="https://brickell-tech.com/blog" target="_blank" rel="noopener">brickell technologies blog ↗</a></span>
   </div>
 
-  <h2>Writeups</h2>
+  <h2>Write-ups</h2>
 
-  <a class="post" href="posts/middie-cve-2026-85184/">
+  <a class="post" href="https://brickell-tech.com/blog/nginx-gateway-fabric-agent-impersonation-cve-2026-96615">
+    <div class="meta">
+      <span class="tag">CVE-2026-96615</span>
+      <span>NGINX Gateway Fabric</span>
+      <span class="sev">CWE-290 · 7.1 High (CVSS 4.0)</span>
+      <span>2026-10-14</span>
+    </div>
+    <h3>Cross-namespace agent impersonation in NGINX Gateway Fabric</h3>
+    <p>The control plane verified each nginx agent's ServiceAccount token, then took the Gateway it belonged to from a label the agent wrote itself. Any tenant could claim another Gateway and read its TLS private keys.</p>
+    <div class="cred">→ fixed in NGINX Gateway Fabric 2.8.0 · F5 advisory K000162610</div>
+  </a>
+
+  <a class="post" href="https://brickell-tech.com/blog/fastify-middie-auth-bypass-cve-2026-85184">
     <div class="meta">
       <span class="tag">CVE-2026-85184</span>
       <span>@fastify/middie</span>
       <span class="sev">CWE-436 · 9.1 Critical</span>
       <span>2026-09-04</span>
     </div>
-    <h3>Two parsers, one request line</h3>
-    <p>Fastify's router resolves an absolute-form request target before it dispatches. middie, deciding whether your path-scoped middleware runs, matched the raw string. Same bytes, two answers, and the authentication middleware on the route never ran.</p>
-    <div class="cred">→ fixed in @fastify/middie 9.3.4 · fifth path-matching advisory on the package in eight months</div>
+    <h3>When your router and your middleware read different URLs</h3>
+    <p>Fastify's router resolves an absolute-form request target before it dispatches. middie, deciding whether your path-scoped middleware runs, matched the raw string, so the authentication middleware on the route never ran.</p>
+    <div class="cred">→ fixed in @fastify/middie 9.3.4</div>
   </a>
 
-  <a class="post" href="posts/gzip-lzh-walkthrough/">
-    <div class="meta">
-      <span class="tag alt">Walkthrough</span>
-      <span>GNU gzip</span>
-      <span class="sev">method · fuzzing · PoC</span>
-      <span>2026-08-27</span>
-    </div>
-    <h3>Checking gzip's .lzh patch</h3>
-    <p>Working notes from going through CVE-2026-41992's fix commit: where the aliasing is written down, why AddressSanitizer reported nothing on a real out of bounds read, the structure-aware generator, and shrinking a candidate to eight bytes. With the commands.</p>
-    <div class="cred">→ 6 candidates in 226 execs, 41 bytes down to 8</div>
-  </a>
-
-  <a class="post" href="posts/gzip-cve-2026-41992/">
+  <a class="post" href="https://brickell-tech.com/blog/gzip-incomplete-patch-cve-2026-41992">
     <div class="meta">
       <span class="tag">CVE-2026-41992</span>
       <span>GNU gzip</span>
       <span class="sev">CWE-126 · 6.9 Medium</span>
-      <span>2026-08-27</span>
+      <span>2026-08-30</span>
     </div>
-    <h3>One array, two lives</h3>
-    <p>The first fix cleared gzip's poisoned Huffman arrays in the branch that crashed, not in the function that reads them, leaving a tree walk eleven lines below it reading 32 KB past the allocation. Measured across three upstream revisions with a layout-independent oracle.</p>
+    <h3>The gzip patch that fixed the crash and left the bug</h3>
+    <p>The first fix cleared gzip's poisoned Huffman arrays in the branch that crashed, not in the function that reads them, leaving the out-of-bounds read reachable a few lines below.</p>
     <div class="cred">→ fix landed upstream in e7378c2d · credited in gzip THANKS and the CVE record</div>
   </a>
 
