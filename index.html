@@ -109,6 +109,19 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/netatalk-spotlight-cve-2026-110779-cve-2026-110780">
+    <div class="meta">
+      <span class="tag">CVE-2026-110779</span>
+      <span class="tag">CVE-2026-110780</span>
+      <span>Netatalk</span>
+      <span class="sev">CWE-125 · CWE-476 · 4.3 / 5.3 Medium</span>
+      <span>2026-10-15</span>
+    </div>
+    <h3>Two memory-safety bugs in Netatalk's Spotlight RPC</h3>
+    <p>Netatalk's Spotlight decoder was well guarded. The handlers reading its output assumed every CNID array had a first element and that every element was a 64-bit integer, giving a NULL dereference and a heap over-read.</p>
+    <div class="cred">→ fixed in Netatalk 4.5.2 · advisories on netatalk.io</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/nginx-gateway-fabric-agent-impersonation-cve-2026-96615">
     <div class="meta">
       <span class="tag">CVE-2026-96615</span>
