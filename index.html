@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/vite-wasm-instance-fs-bypass-cve-2026-112947">
+    <div class="meta">
+      <span class="tag">CVE-2026-112947</span>
+      <span>Vite</span>
+      <span class="sev">CWE-22 · CWE-209 · 6.3 Medium (CVSS 4.0)</span>
+      <span>2026-10-20</span>
+    </div>
+    <h3>Reading past Vite's server.fs boundary through a WebAssembly error</h3>
+    <p>An internal query from Vite 8.2's Wasm support reached a plugin that read files without checking server.fs. The WebAssembly parse error then sent the first four bytes of any file on the host back to the requester.</p>
+    <div class="cred">→ fixed in Vite 8.2.4 and 8.3.3 · GHSA-vfpm-58rq-9qcg</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/netatalk-spotlight-cve-2026-110779-cve-2026-110780">
     <div class="meta">
       <span class="tag">CVE-2026-110779</span>
