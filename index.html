@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/apache-pulsar-shadow-topic-cross-tenant-cve-2026-105937">
+    <div class="meta">
+      <span class="tag">CVE-2026-105937</span>
+      <span>Apache Pulsar</span>
+      <span class="sev">CWE-862 · 8.7 High (CVSS 4.0)</span>
+      <span>2026-10-21</span>
+    </div>
+    <h3>Reading another tenant's messages through an Apache Pulsar shadow topic</h3>
+    <p>A tenant admin could create a topic in their own namespace, point its reserved PULSAR.SHADOW_SOURCE property at a topic in another tenant, and consume that tenant's stored messages. The broker never checked the caller against the source topic.</p>
+    <div class="cred">→ fixed in Pulsar 4.0.14, 4.2.5 and 5.0.0</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/vite-wasm-instance-fs-bypass-cve-2026-112947">
     <div class="meta">
       <span class="tag">CVE-2026-112947</span>
