@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/authlib-algorithm-confusion-incomplete-fix-cve-2026-114615">
+    <div class="meta">
+      <span class="tag">CVE-2026-114615</span>
+      <span>Authlib</span>
+      <span class="sev">CWE-184 · CWE-347 · 7.4 High (CVSS 3.1)</span>
+      <span>2026-10-22</span>
+    </div>
+    <h3>Off by one newline: how Authlib's JWT algorithm confusion came back</h3>
+    <p>Authlib's fix for CVE-2024-37568 only checked whether a key started with -----BEGIN, while the PEM loader skips anything in front of it. One leading newline turned the issuer's public key back into an HS256 secret, so anyone holding it could forge tokens.</p>
+    <div class="cred">→ fixed in Authlib 1.9.0 · GHSA-7vr2-2fgp-9w7p</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/apache-pulsar-shadow-topic-cross-tenant-cve-2026-105937">
     <div class="meta">
       <span class="tag">CVE-2026-105937</span>

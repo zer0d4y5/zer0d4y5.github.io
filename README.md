@@ -5,6 +5,7 @@ Security research by Elias Hasas ([@zer0d4y5](https://github.com/zer0d4y5)).
 The write-ups are published on the [Brickell Technologies blog](https://brickell-tech.com/blog). This site
 is a link page, and the old post URLs redirect to the matching articles there.
 
+- [CVE-2026-114615: Off by One Newline, or How Authlib's JWT Algorithm Confusion Came Back](https://brickell-tech.com/blog/authlib-algorithm-confusion-incomplete-fix-cve-2026-114615)
 - [CVE-2026-105937: Reading Another Tenant's Messages Through an Apache Pulsar Shadow Topic](https://brickell-tech.com/blog/apache-pulsar-shadow-topic-cross-tenant-cve-2026-105937)
 - [CVE-2026-112947: Reading Past Vite's server.fs Boundary Through a WebAssembly Error](https://brickell-tech.com/blog/vite-wasm-instance-fs-bypass-cve-2026-112947)
 - [CVE-2026-110779 and CVE-2026-110780: Two Memory-Safety Bugs in Netatalk's Spotlight RPC](https://brickell-tech.com/blog/netatalk-spotlight-cve-2026-110779-cve-2026-110780)
