@@ -121,6 +121,18 @@
     <div class="cred">→ fixed in consul-k8s 2.1.0 and 1.8.18 · HCSEC-2026-50</div>
   </a>
 
+  <a class="post" href="https://brickell-tech.com/blog/firezone-gateway-proxy-ip-bypass-fz-2026-008">
+    <div class="meta">
+      <span class="tag">FZ-2026-008</span>
+      <span>Firezone</span>
+      <span class="sev">Access control bypass · no CVE</span>
+      <span>2026-10-24</span>
+    </div>
+    <h3>Firezone Gateways trusted the proxy IPs Clients sent them</h3>
+    <p>A Firezone Client tells the Gateway which placeholder IPs it picked for a DNS Resource, and the Gateway never checked they came from the reserved range. Every address it accepted became a route, so one DNS Resource grant reached any host the Gateway could.</p>
+    <div class="cred">→ fixed in Gateway 1.6.1 · FZ-2026-008</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/authlib-algorithm-confusion-incomplete-fix-cve-2026-114615">
     <div class="meta">
       <span class="tag">CVE-2026-114615</span>
