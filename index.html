@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/consul-k8s-cross-namespace-acl-bypass-cve-2026-110720">
+    <div class="meta">
+      <span class="tag">CVE-2026-110720</span>
+      <span>HashiCorp consul-k8s</span>
+      <span class="sev">CWE-863 · 9.9 Critical (CVSS 3.1)</span>
+      <span>2026-10-26</span>
+    </div>
+    <h3>A ServiceAccount name was enough to become Consul admin</h3>
+    <p>consul-k8s gave its own components Consul ACL roles by ServiceAccount name and never checked the namespace. A tenant who created a ServiceAccount with the connect injector's name in their own namespace could log in as it and mint a global-management token.</p>
+    <div class="cred">→ fixed in consul-k8s 2.1.0 and 1.8.18 · HCSEC-2026-50</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/authlib-algorithm-confusion-incomplete-fix-cve-2026-114615">
     <div class="meta">
       <span class="tag">CVE-2026-114615</span>
