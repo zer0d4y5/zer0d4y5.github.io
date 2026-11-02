@@ -5,6 +5,7 @@ Security research by Elias Hasas ([@zer0d4y5](https://github.com/zer0d4y5)).
 The write-ups are published on the [Brickell Technologies blog](https://brickell-tech.com/blog). This site
 is a link page, and the old post URLs redirect to the matching articles there.
 
+- [Ending a URL in /api/signout Made Any SuperTokens Dashboard User an Admin](https://brickell-tech.com/blog/supertokens-dashboard-admins-query-string-bypass)
 - [CVE-2026-110720: A ServiceAccount Name Was Enough to Become Consul Admin](https://brickell-tech.com/blog/consul-k8s-cross-namespace-acl-bypass-cve-2026-110720)
 - [FZ-2026-008: Firezone Gateways Trusted the Proxy IPs Clients Sent Them](https://brickell-tech.com/blog/firezone-gateway-proxy-ip-bypass-fz-2026-008)
 - [CVE-2026-114615: Off by One Newline, or How Authlib's JWT Algorithm Confusion Came Back](https://brickell-tech.com/blog/authlib-algorithm-confusion-incomplete-fix-cve-2026-114615)

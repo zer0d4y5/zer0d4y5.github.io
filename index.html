@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/supertokens-dashboard-admins-query-string-bypass">
+    <div class="meta">
+      <span class="tag">GHSA-cwq8-r97g-9cvh +2</span>
+      <span>SuperTokens (Node, Python, Go)</span>
+      <span class="sev">CWE-863 · 8.8 High (CVSS 3.1)</span>
+      <span>2026-11-02</span>
+    </div>
+    <h3>Ending a URL in /api/signout made any SuperTokens dashboard user an admin</h3>
+    <p>SuperTokens' backend SDKs let read-only dashboard users sign out by checking whether the request URL ended in /api/signout, and that URL still had the query string on it. Adding ?x=/api/signout to any dashboard write got it past the admins list, setting another user's password included.</p>
+    <div class="cred">→ fixed in supertokens-node 24.0.4, supertokens-python 0.31.4 and supertokens-golang 0.26.1, with backports · CVE IDs pending</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/consul-k8s-cross-namespace-acl-bypass-cve-2026-110720">
     <div class="meta">
       <span class="tag">CVE-2026-110720</span>
