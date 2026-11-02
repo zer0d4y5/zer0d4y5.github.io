@@ -128,7 +128,7 @@
       <span class="sev">CWE-863 · 8.8 High (CVSS 3.1)</span>
       <span>2026-11-02</span>
     </div>
-    <h3>Ending a URL in /api/signout made any SuperTokens dashboard user an admin</h3>
+    <h3>SuperTokens dashboard admins restriction bypassed with a query string</h3>
     <p>SuperTokens' backend SDKs let read-only dashboard users sign out by checking whether the request URL ended in /api/signout, and that URL still had the query string on it. Adding ?x=/api/signout to any dashboard write got it past the admins list, setting another user's password included.</p>
     <div class="cred">→ fixed in supertokens-node 24.0.4, supertokens-python 0.31.4 and supertokens-golang 0.26.1, with backports · CVE IDs pending</div>
   </a>
@@ -164,7 +164,7 @@
       <span class="sev">CWE-184 · CWE-347 · 7.4 High (CVSS 3.1)</span>
       <span>2026-10-22</span>
     </div>
-    <h3>Off by one newline: how Authlib's JWT algorithm confusion came back</h3>
+    <h3>A leading newline bypassed Authlib's JWT algorithm confusion fix</h3>
     <p>Authlib's fix for CVE-2024-37568 only checked whether a key started with -----BEGIN, while the PEM loader skips anything in front of it. One leading newline turned the issuer's public key back into an HS256 secret, so anyone holding it could forge tokens.</p>
     <div class="cred">→ fixed in Authlib 1.9.0 · GHSA-7vr2-2fgp-9w7p</div>
   </a>
@@ -225,7 +225,7 @@
       <span class="sev">CWE-436 · 9.1 Critical</span>
       <span>2026-09-04</span>
     </div>
-    <h3>When your router and your middleware read different URLs</h3>
+    <h3>@fastify/middie auth bypass with absolute-form requests</h3>
     <p>Fastify's router resolves an absolute-form request target before it dispatches. middie, deciding whether your path-scoped middleware runs, matched the raw string, so the authentication middleware on the route never ran.</p>
     <div class="cred">→ fixed in @fastify/middie 9.3.4</div>
   </a>
@@ -237,7 +237,7 @@
       <span class="sev">CWE-126 · 6.9 Medium</span>
       <span>2026-08-30</span>
     </div>
-    <h3>The gzip patch that fixed the crash and left the bug</h3>
+    <h3>Incomplete fix in gzip's LZH decoder</h3>
     <p>The first fix cleared gzip's poisoned Huffman arrays in the branch that crashed, not in the function that reads them, leaving the out-of-bounds read reachable a few lines below.</p>
     <div class="cred">→ fix landed upstream in e7378c2d · credited in gzip THANKS and the CVE record</div>
   </a>
