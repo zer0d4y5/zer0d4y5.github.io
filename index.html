@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/open-cluster-management-grpc-broker-cve-2026-91182">
+    <div class="meta">
+      <span class="tag">CVE-2026-91182</span>
+      <span>Open Cluster Management</span>
+      <span class="sev">CWE-639 · 3.3 Low (CVSS 3.1, Red Hat)</span>
+      <span>2026-11-02</span>
+    </div>
+    <h3>OCM's gRPC broker authorized one cluster and wrote to another</h3>
+    <p>Open Cluster Management's gRPC broker built its access check from the cluster named in an event's header, then wrote to the cluster named in the payload. Any accepted cluster could rewrite other clusters' objects on the hub and move itself into another tenant's cluster set.</p>
+    <div class="cred">→ fixed in OCM 1.4.0 · CVE-2026-91182</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/supertokens-dashboard-admins-query-string-bypass">
     <div class="meta">
       <span class="tag">GHSA-cwq8-r97g-9cvh +2</span>
