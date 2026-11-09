@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/supertokens-saml-audience-bypass-cve-2026-123802">
+    <div class="meta">
+      <span class="tag">CVE-2026-123802</span>
+      <span>SuperTokens core</span>
+      <span class="sev">CWE-287 · 8.1 High (CVSS 3.1)</span>
+      <span>2026-11-09</span>
+    </div>
+    <h3>SuperTokens SAML accepted assertions issued to other service providers</h3>
+    <p>SuperTokens core passed a SAML response if any one assertion named the right audience, then took the user's identity from the last assertion. Adding a victim's signed assertion for some other app after the attacker's own signed the attacker in as the victim.</p>
+    <div class="cred">→ fixed in supertokens-core 11.3.8, 11.4.8, 12.0.11, 12.1.2, 12.2.1 and 12.3.1 · GHSA-wfg2-vqfg-rqh6</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/open-cluster-management-grpc-broker-cve-2026-91182">
     <div class="meta">
       <span class="tag">CVE-2026-91182</span>

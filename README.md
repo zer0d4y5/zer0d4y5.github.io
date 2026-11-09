@@ -5,6 +5,7 @@ Security research by Elias Hasas ([@zer0d4y5](https://github.com/zer0d4y5)).
 The write-ups are published on the [Brickell Technologies blog](https://brickell-tech.com/blog). This site
 is a link page, and the old post URLs redirect to the matching articles there.
 
+- [CVE-2026-123802: SuperTokens SAML Accepted Assertions Issued to Other Service Providers](https://brickell-tech.com/blog/supertokens-saml-audience-bypass-cve-2026-123802)
 - [CVE-2026-91182: OCM's gRPC Broker Authorized One Cluster and Wrote to Another](https://brickell-tech.com/blog/open-cluster-management-grpc-broker-cve-2026-91182)
 - [SuperTokens Dashboard Admins Restriction Bypassed With a Query String](https://brickell-tech.com/blog/supertokens-dashboard-admins-query-string-bypass)
 - [CVE-2026-110720: A ServiceAccount Name Was Enough to Become Consul Admin](https://brickell-tech.com/blog/consul-k8s-cross-namespace-acl-bypass-cve-2026-110720)
