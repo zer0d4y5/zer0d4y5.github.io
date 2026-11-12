@@ -109,6 +109,18 @@
 
   <h2>Write-ups</h2>
 
+  <a class="post" href="https://brickell-tech.com/blog/immich-oauth-state-cookie-account-takeover-ghsa-7j23-rprg-3g5q">
+    <div class="meta">
+      <span class="tag">GHSA-7j23-rprg-3g5q</span>
+      <span>Immich</span>
+      <span class="sev">7.5 High (CVSS 3.1)</span>
+      <span>2026-11-12</span>
+    </div>
+    <h3>Bring your own state: Immich OAuth account takeover</h3>
+    <p>Immich's public OAuth authorize endpoint wrote a caller-supplied state into the cookie that account linking checked against. One click from a signed-in victim linked the attacker's identity provider login to the victim's account, on providers that don't advertise PKCE.</p>
+    <div class="cred">→ fixed in Immich v3.4.0 · CVE pending</div>
+  </a>
+
   <a class="post" href="https://brickell-tech.com/blog/supertokens-saml-audience-bypass-cve-2026-123802">
     <div class="meta">
       <span class="tag">CVE-2026-123802</span>
